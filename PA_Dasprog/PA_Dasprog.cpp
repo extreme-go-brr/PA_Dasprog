@@ -3,6 +3,8 @@
 #include <limits>
 using namespace std;
 
+// POIN 1: POINTER/ALOKASI DINAMIS === STRUCTURE LINKED LIST
+
 //STRUCT STATUS NODE
 
 struct StatusNode {
@@ -50,7 +52,7 @@ int inputAngka(string pesan) {
     return angka;
 }
 
-//APPLY STATUS
+//POIN 2: APPLY STATUS
 
 void applyStatus(StatusNode*& list, string nama, int val, int turn) {
 
@@ -92,75 +94,65 @@ void applyStatus(StatusNode*& list, string nama, int val, int turn) {
     cout << nama << " berhasil diterapkan!\n";
 }
 
-//RECURSIVE APPLY EFFECTS
+//POIN 3: RECURSIVE APPLY EFFECTS
 
-void applyEffectsRecursive(StatusNode* list, Character& player) {
+void applyEffect(StatusNode* list, Character& player) {
 
     if (list == nullptr) {
         return;
     }
 
-    string nama = list->namaStatus;
+    string statusEffect = list->namaStatus;
 
-    if (nama == "Poison") {
-
+    if (statusEffect == "Poison") {
         player.hp -= list->efekValue;
-
         cout << "[POISON] HP berkurang "
-             << list->efekValue << "!\n";
+            << list->efekValue << "!\n";
     }
 
-    else if (nama == "Burn") {
-
+    else if (statusEffect == "Burn") {
         player.hp -= list->efekValue;
-
         cout << "[BURN] HP berkurang "
-             << list->efekValue << "!\n";
+            << list->efekValue << "!\n";
     }
 
-    else if (nama == "Freeze") {
-
+    else if (statusEffect == "Freeze") {
         player.skipTurn = true;
-
         cout << "[FREEZE] Karakter terkena Freeze!\n";
     }
 
-    else if (nama == "Regeneration") {
-
+    else if (statusEffect == "Regeneration") {
         player.hp += list->efekValue;
-
         if (player.hp > player.maxHp) {
             player.hp = player.maxHp;
         }
-
         cout << "[REGENERATION] HP pulih "
-             << list->efekValue << "!\n";
+            << list->efekValue << "!\n";
     }
 
-    else if (nama == "Attack Boost") {
-
+    else if (statusEffect == "Attack Boost") {
         cout << "[ATTACK BOOST] Bonus Attack +"
-             << list->efekValue << "!\n";
+            << list->efekValue << "!\n";
     }
 
-    // Rekursi ke node berikutnya
-    applyEffectsRecursive(list->next, player);
+	if (player.hp < 0) {
+		player.hp = 0;
+	}
+    // next rekursi
+    applyEffect(list->next, player);
 }
 
-//RECURSIVE ATTACK CALCULATION
+//RECURSIVE ATTACK CALCULATION0
 
 int calculateAttack(StatusNode* list, int baseAttack) {
 
     if (list == nullptr) {
         return baseAttack;
     }
-
     int bonus = 0;
-
     if (list->namaStatus == "Attack Boost") {
         bonus = list->efekValue;
     }
-
     return bonus + calculateAttack(list->next, baseAttack);
 }
 
@@ -171,64 +163,54 @@ int countDebuffsRecursive(StatusNode* list) {
     if (list == nullptr) {
         return 0;
     }
-
     int jumlah = 0;
-
     if (list->namaStatus == "Poison" ||
         list->namaStatus == "Burn" ||
         list->namaStatus == "Freeze") {
-
         jumlah = 1;
     }
 
     return jumlah + countDebuffsRecursive(list->next);
 }
 
-//RECURSIVE REMOVE EXPIRED STATUS
-
-void removeExpiredRecursive(StatusNode*& list) {
-
+// PENGURANGAN DURASI STATUS
+void decreaseDurationRecursive(StatusNode* list) {
     if (list == nullptr) {
         return;
     }
 
-    if (list->durasiTurn <= 0) {
+    list->durasiTurn--;
+    decreaseDurationRecursive(list->next);
+}
 
-        StatusNode* hapus = list;
+//RECURSIVE REMOVE EXPIRED STATUS
 
-        list = list->next;
-
-        cout << hapus->namaStatus
-             << " telah berakhir!\n";
-
-        delete hapus;
-
-        removeExpiredRecursive(list);
+void removeExpiredRecursive(StatusNode*& list) {
+    if (list == nullptr) {
+        return;
     }
-
-    else {
-
-        removeExpiredRecursive(list->next);
+        
+    removeExpiredRecursive(list->next);
+   
+    if (list->durasiTurn <= 0) {
+        StatusNode* hapus = list;
+        list = list->next;
+        cout << hapus->namaStatus << " telah berakhir (memori didealokasikan).\n";
+        delete hapus;
     }
 }
 
 //RECURSIVE FULL CLEANSE
 
 void fullCleanseRecursive(StatusNode*& list) {
-
     if (list == nullptr) {
         return;
     }
-
+    fullCleanseRecursive(list->next);
     StatusNode* hapus = list;
-
-    list = list->next;
-
+    list = nullptr;
     cout << "Menghapus " << hapus->namaStatus << "...\n";
-
     delete hapus;
-
-    fullCleanseRecursive(list);
 }
 
 //DISPLAY STATUS
@@ -239,173 +221,97 @@ void displayStatus(StatusNode* list) {
         cout << "\nTidak ada status aktif.\n";
         return;
     }
-
     cout << "\n========== ACTIVE STATUS ==========\n";
-
     cout << "\n[BUFF]\n";
-
     StatusNode* temp = list;
     bool adaBuff = false;
-
     while (temp != nullptr) {
-
-        if (temp->namaStatus == "Attack Boost" ||
-            temp->namaStatus == "Regeneration") {
-
+        if (temp->namaStatus == "Attack Boost" ||temp->namaStatus == "Regeneration") {
             cout << temp->namaStatus
-                 << " | Value: +" << temp->efekValue
-                 << " | Duration: " << temp->durasiTurn
-                 << " turn\n";
-
+                << " | Value: +" << temp->efekValue
+                << " | Duration: " << temp->durasiTurn
+                << " turn\n";
             adaBuff = true;
         }
-
         temp = temp->next;
     }
-
-    if (!adaBuff) {
-        cout << "Tidak ada buff.\n";
-    }
-
+    if (!adaBuff) cout << "Tidak ada buff.\n";
+    
     cout << "\n[DEBUFF]\n";
-
     temp = list;
     bool adaDebuff = false;
-
     while (temp != nullptr) {
-
-        if (temp->namaStatus == "Poison" ||
-            temp->namaStatus == "Burn" ||
-            temp->namaStatus == "Freeze") {
-
+        if (temp->namaStatus == "Poison" || temp->namaStatus == "Burn" || temp->namaStatus == "Freeze") {
             cout << temp->namaStatus
-                 << " | Value: " << temp->efekValue
-                 << " | Duration: " << temp->durasiTurn
-                 << " turn\n";
-
+                << " | Value: " << temp->efekValue
+                << " | Duration: " << temp->durasiTurn
+                << " turn\n";
             adaDebuff = true;
         }
-
         temp = temp->next;
     }
-
-    if (!adaDebuff) {
-        cout << "Tidak ada debuff.\n";
-    }
+    if (!adaDebuff) cout << "Tidak ada debuff.\n";
 
     cout << "===================================\n";
 }
 
-//CHARACTER INFORMATION
-
 void displayCharacter(Character player, StatusNode* list) {
-
     cout << "\n========== CHARACTER INFO ==========\n";
-
     cout << "Name   : " << player.nama << endl;
-
-    cout << "HP     : " << player.hp
-         << "/" << player.maxHp << endl;
-
-    cout << "Attack : "
-         << calculateAttack(list, player.attack) << endl;
-
+    cout << "HP     : " << player.hp << "/" << player.maxHp << endl;
+    cout << "Attack : " << calculateAttack(list, player.attack) << endl;
+	cout << "Debuff : " << countDebuffsRecursive(list) << endl;
     cout << "====================================\n";
 }
 
-//PROCESS TURN
-
-void processTurn(StatusNode*& list,
-                 Character& player,
-                 Enemy& enemy,
-                 int& turn) {
-
-    cout << "\n====================================\n";
-    cout << "              TURN " << turn << endl;
-    cout << "====================================\n";
-
+void processTurn(StatusNode*& list, Character& player, Enemy& enemy, int& turn) {
+    cout << " TURN " << turn << endl;
     player.skipTurn = false;
 
-    // Mengaplikasikan seluruh efek status
-    cout << "\n--- Applying Status Effects ---\n";
-
-    applyEffectsRecursive(list, player);
-
-    if (player.hp < 0) {
-        player.hp = 0;
+    cout << "\n-Applying Status Effects-\n";
+    applyEffect(list, player);
+    cout << "\nTotal Active Debuffs: " << countDebuffsRecursive(list) << endl;
+    
+    if (player.hp <= 0) {
+        cout << "\nKnight has been defeated!\n";
     }
-
-    // Menghitung jumlah debuff
-    cout << "\nActive Debuffs: "
-         << countDebuffsRecursive(list) << endl;
-
-    // Mengecek Freeze
-    if (player.skipTurn) {
-
-        cout << "\nKnight kehilangan giliran karena Freeze!\n";
+    
+    else if (player.skipTurn) {
+        cout << "\nKnight lost turn because of Freeze!\n";
     }
-
-    // Pemain menyerang jika tidak terkena Freeze
+    
     else if (player.hp > 0 && enemy.hp > 0) {
-
         int damage = calculateAttack(list, player.attack);
-
         enemy.hp -= damage;
-
         if (enemy.hp < 0) {
             enemy.hp = 0;
         }
-
         cout << "\n--- COMBAT ---\n";
-
-        cout << player.nama << " menyerang "
-             << enemy.nama << "!\n";
-
+        cout << player.nama << " menyerang " << enemy.nama << "!\n";
         cout << "Total Damage : " << damage << endl;
-
-        cout << enemy.nama << " HP: "
-             << enemy.hp << "/" << enemy.maxHp << endl;
+        cout << enemy.nama << " HP: " << enemy.hp << "/" << enemy.maxHp << endl;
     }
 
-    // Musuh menyerang jika masih hidup
     if (enemy.hp > 0 && player.hp > 0) {
-
         player.hp -= enemy.attack;
-
         if (player.hp < 0) {
             player.hp = 0;
         }
+        cout << "\n" << enemy.nama << " menyerang balik!\n";
 
-        cout << "\n" << enemy.nama
-             << " menyerang balik!\n";
-
-        cout << "Damage diterima: "
-             << enemy.attack << endl;
+        cout << "Damage diterima: " << enemy.attack << endl;
     }
-
-    // Mengurangi durasi seluruh status
-    StatusNode* temp = list;
-
-    while (temp != nullptr) {
-        temp->durasiTurn--;
-        temp = temp->next;
-    }
-
-    // Menghapus status yang durasinya habis
-    cout << "\n--- Expired Status Check ---\n";
-
+    
+    cout << "\n--- Updating & Expiring Status ---\n";
+    decreaseDurationRecursive(list);
     removeExpiredRecursive(list);
 
-    // Menampilkan informasi terbaru
     displayCharacter(player, list);
-
     displayStatus(list);
 
-    // Hasil pertarungan
     if (player.hp <= 0) {
         cout << "\nKNIGHT HAS BEEN DEFEATED!\n";
     }
-
     else if (enemy.hp <= 0) {
         cout << "\nVICTORY! GOBLIN HAS BEEN DEFEATED!\n";
     }
@@ -422,27 +328,27 @@ int main() {
 
     Character player = {
         "Knight",
-        100,
-        100,
-        20,
+        180,
+        180,
+        15,
         false
     };
 
     Enemy enemy = {
         "Goblin",
-        100,
-        100,
-        8
+        120,
+        120,
+        12
     };
 
     int pilihan;
     int turn = 1;
 
     // Status awal
-    applyStatus(statusList, "Poison", 5, 3);
-    applyStatus(statusList, "Burn", 10, 2);
+    applyStatus(statusList, "Poison", 7, 4);
+    applyStatus(statusList, "Burn", 10, 3);
     applyStatus(statusList, "Attack Boost", 10, 3);
-    applyStatus(statusList, "Regeneration", 5, 4);
+    applyStatus(statusList, "Regeneration", 5, 2);
     applyStatus(statusList, "Freeze", 0, 1);
 
     do {
@@ -454,8 +360,8 @@ int main() {
         displayCharacter(player, statusList);
 
         cout << "\nEnemy: " << enemy.nama << endl;
-        cout << "Enemy HP: " << enemy.hp
-             << "/" << enemy.maxHp << endl;
+        cout << "Enemy HP: " << enemy.hp << "/" << enemy.maxHp << endl;
+        cout << "Enemy Attack: " << enemy.attack << endl;
 
         cout << "\n--------------- MENU ---------------\n";
 
@@ -468,76 +374,56 @@ int main() {
         cout << "------------------------------------\n";
 
         pilihan = inputAngka("Choose option: ");
-
         switch (pilihan) {
 
-            case 1:
+        case 1:
+            displayStatus(statusList);
+            break;
 
-                displayStatus(statusList);
-
-                break;
-
-            case 2:
-
-                if (player.hp <= 0) {
-                    cout << "Knight sudah kalah!\n";
-                }
-
-                else if (enemy.hp <= 0) {
-                    cout << "Musuh sudah dikalahkan!\n";
-                }
-
-                else {
-                    processTurn(statusList, player, enemy, turn);
-                }
-
-                break;
-
-            case 3: {
-
-                string nama;
-                int val, durasi;
-
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-                cout << "\nNama Status: ";
-                getline(cin, nama);
-
-                val = inputAngka("Nilai Efek: ");
-
-                durasi = inputAngka("Durasi Turn: ");
-
-                applyStatus(statusList, nama, val, durasi);
-
-                break;
+        case 2:
+            if (player.hp <= 0) {
+                cout << "Knight defeated!\n";
             }
+            else if (enemy.hp <= 0) {
+                cout << "Enemy has been defeated!\n";
+            }
+            else {
+                processTurn(statusList, player, enemy, turn);
+            }
+            break;
 
-            case 4:
+        case 3: {
+            string nama;
+            int val, durasi;
 
-                fullCleanseRecursive(statusList);
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\nNama Status: ";
+            getline(cin, nama);
 
-                cout << "Semua status berhasil dibersihkan!\n";
+            val = inputAngka("Nilai Efek: ");
+            durasi = inputAngka("Durasi Turn: ");
 
-                break;
+            applyStatus(statusList, nama, val, durasi);
+            break;
+        }
 
-            case 0:
+        case 4:
+            fullCleanseRecursive(statusList);
+            cout << "Semua status berhasil dibersihkan!\n";
+            break;
 
-                cout << "Exiting Game...\n";
+        case 0:
+            cout << "Exiting Game...\n";
+            break;
 
-                break;
-
-            default:
-
-                cout << "Pilihan tidak valid!\n";
+        default:
+            cout << "Pilihan tidak valid!\n";
         }
 
     } while (pilihan != 0);
 
     cout << "\n--- MEMORY CLEANUP ---\n";
-
     fullCleanseRecursive(statusList);
-
     cout << "All allocated memory has been released.\n";
-
     return 0;
 }
